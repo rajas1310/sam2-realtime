@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import cv2
+import random
 
 from sam2.build_sam import build_sam2_camera_predictor
 
@@ -27,8 +28,18 @@ if torch.cuda.get_device_properties(0).major >= 8:
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
 
+def generate_fluorescent_color():
+    """
+    Generates a random bright fluorescent color as an RGB tuple.
+    """
+    r = random.randint(200, 255)
+    g = random.randint(200, 255) if random.random() < 0.5 else random.randint(0, 50) 
+    b = random.randint(200, 255) if random.random() < 0.5 else random.randint(0, 50) 
+    return (b, g, r) 
+
+
 # Config and checkpoint
-sam2_checkpoint = "checkpoints/sam2.1_hiera_tiny.pt"
+sam2_checkpoint = "../checkpoints/sam2.1_hiera_tiny.pt"
 model_cfg = "configs/sam2.1/sam2.1_hiera_t_512"
 
 # Build video predictor with vos_optimized=True setting
@@ -37,7 +48,9 @@ predictor = build_sam2_camera_predictor(
 )
 
 #################################
-cap = cv2.VideoCapture("notebooks/videos/aquarium/aquarium.mp4")
+video_path = "../../videos/failed.mp4"
+
+cap = cv2.VideoCapture(video_path)
 num_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 ret, frame = cap.read()
 width, height = frame.shape[:2][::-1]
@@ -45,8 +58,8 @@ width, height = frame.shape[:2][::-1]
 predictor.load_first_frame(frame)
 if_init = True
 
-using_point = False # if True, we use point prompt
-using_box = True # if True, we use point prompt
+using_point = True # if True, we use point prompt
+using_box = False # if True, we use point prompt
 using_mask= False  # if True, we use mask prompt
 
 ann_frame_idx = 0  # the frame index we interact with
@@ -62,6 +75,24 @@ labels = np.array([1], dtype=np.int32)
 bbox = np.array([[600, 214], [765, 286]], dtype=np.float32)
 
 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+points = []
+
+# Mouse callback function to capture points
+def select_points(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        points.append((x, y))
+        color = generate_fluorescent_color()
+        cv2.circle(frame, (x, y), 5, color, -1)
+        cv2.imshow("Select Key Points", frame)
+
+# Display frame for point selection
+cv2.imshow("Select Key Points", frame)
+cv2.setMouseCallback("Select Key Points", select_points)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+labels = [1] * len(points)
 
 
 if using_point:
@@ -97,7 +128,7 @@ torch.cuda.empty_cache()
 with torch.autocast("cuda", torch.bfloat16):
     with torch.inference_mode():
         for i in tqdm(range(runs), disable=not verbose, desc="Benchmarking"):
-            cap = cv2.VideoCapture("notebooks/videos/aquarium/aquarium.mp4")
+            cap = cv2.VideoCapture(video_path)
             start = time.time()
             for _ in tqdm(range(int(num_frames)), desc="Tracking", leave=False, total=num_frames):
 
