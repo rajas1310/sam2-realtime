@@ -10,6 +10,9 @@ from pathlib import Path
 from sam2.build_sam import build_sam2_camera_predictor
 import time
 import colorsys
+from datetime import datetime
+
+import icp_2d
 
 import argparse
 
@@ -31,8 +34,12 @@ if torch.cuda.get_device_properties(0).major >= 8:
 
 
 
-# parser.add_argument()
+parser.add_argument("-v", "--video_path", required=True, type=str)
+parser.add_argument("--out_dir", type=str, default="../../videos/")
+parser.add_argument("--model","--model_checkpoint_path", type=str, default="../checkpoints/sam2.1_hiera_tiny.pt")
+parser.add_argument("--cfg","--model_config_path", type=str, default="configs/sam2.1/sam2.1_hiera_t_512")
 
+args = parser.parse_args()
 
 def generate_fluorescent_color(num = 10):
     """
@@ -48,14 +55,22 @@ def generate_fluorescent_color(num = 10):
 
     return colors
 
-sam2_checkpoint = "../checkpoints/sam2.1_hiera_tiny.pt"
-model_cfg = "configs/sam2.1/sam2.1_hiera_t_512"
+sam2_checkpoint = args.model #"../checkpoints/sam2.1_hiera_tiny.pt"
+model_cfg = args.cfg #"configs/sam2.1/sam2.1_hiera_t_512"
 
 predictor = build_sam2_camera_predictor(model_cfg, sam2_checkpoint)
 
-video_path = "../../videos/randomized_tilt.mp4"
-output_path = f"../../videos/output_{Path(video_path).name}"
+video_path = args.video_path#"rtsp://127.0.0.1:8554/stream" #"../../videos/randomized_tilt.mp4"
+output_path = f"{args.out_dir}/output_{Path(video_path).name}"
 
+if output_path[-3:] != 'mp4':
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d%H%M%S")
+    output_path = output_path + f"_{timestamp}_.mp4"
+
+
+if not os.path.isdir(args.out_dir):
+    os.makedirs(args.out_dir)
 
 cap = cv2.VideoCapture(video_path)
 
