@@ -11,6 +11,7 @@ from sam2.build_sam import build_sam2_camera_predictor
 import time
 import colorsys
 from datetime import datetime
+import pickle
 
 import icp_2d
 
@@ -83,12 +84,15 @@ out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 30.0, (frame
 colors = generate_fluorescent_color(10) # Generate 10 random bright colors
 
 if_init = False
-
+fcount = 0
+T_matrices = {}
 
 while True:
     ret, frame = cap.read()
     if not ret:
         break
+    
+    fcount += 1
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -145,6 +149,11 @@ while True:
                 _, out_obj_ids, out_mask_logits = predictor.add_new_prompt(
                     frame_idx=ann_frame_idx, obj_id=i, points=points[i], labels=labels[i]
                 )
+        
+        T_matrices = {i:{} for i in ann_obj_id}
+        prev_frame_mask = [np.zeros((frame_height, frame_width, 1), dtype=np.uint8)]*len(ann_obj_id)
+
+
 
 
         ## ! add bbox
@@ -165,12 +174,18 @@ while True:
     else:
         out_obj_ids, out_mask_logits = predictor.track(frame)
 
+        # print (out_obj_ids)
+
         all_mask = np.zeros((height, width, 1), dtype=np.uint8)
         # print(all_mask.shape)
         for i in range(0, len(out_obj_ids)):
-            out_mask = (out_mask_logits[i] > 0.0).permute(1, 2, 0).cpu().numpy().astype(
-                np.uint8
-            ) * 255
+            out_mask = (out_mask_logits[i] > 0.0).permute(1, 2, 0).cpu().numpy().astype(np.uint8)
+
+            if fcount != 1:
+                M = icp_2d.icp(source_mask=prev_frame_mask[i], target_mask=out_mask)
+                T_matrices[out_obj_ids[i]][fcount] = M
+            
+            prev_frame_mask[i] = out_mask
 
             out_mask = cv2.cvtColor(out_mask, cv2.COLOR_GRAY2RGB)
             out_mask[:, :, i] = np.clip(out_mask[:, :, i] * 255, 0, 255).astype(np.uint8)
@@ -184,6 +199,7 @@ while True:
         # all_mask[:, :, 2] = np.clip(all_mask[:, :, 2] * 255, 0, 255).astype(np.uint8)
 
         # frame = cv2.addWeighted(frame, 1, all_mask, 0.5, 0)
+    print("Frame: ", fcount, end='\r')
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     cv2.imshow("frame", frame)
     out.write(frame)
@@ -191,6 +207,9 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
+with open(f"{args.out_dir}/{Path(args.video_path).stem}.pkl", "wb") as f:
+    pickle.dump(T_matrices, f)
+print(T_matrices)
 print(f"Video saved at {output_path}")
 cap.release()
 out.release()

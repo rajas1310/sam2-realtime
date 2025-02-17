@@ -43,6 +43,9 @@ def icp(source_mask, target_mask, max_iterations=50, tolerance=1e-5, edges_only=
     
     prev_error = float('inf')
     T = np.eye(4)
+
+    if len(target_points) == 0:
+        return np.zeros((4,4))
     
     for i in range(max_iterations):
         tree = KDTree(target_points)
