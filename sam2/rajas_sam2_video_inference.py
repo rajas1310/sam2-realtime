@@ -199,7 +199,7 @@ while True:
         # all_mask[:, :, 2] = np.clip(all_mask[:, :, 2] * 255, 0, 255).astype(np.uint8)
 
         # frame = cv2.addWeighted(frame, 1, all_mask, 0.5, 0)
-    print("Frame: ", fcount, end='\r')
+    # print("Frame: ", fcount, end='\r')
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     cv2.imshow("frame", frame)
     out.write(frame)
