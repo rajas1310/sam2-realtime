@@ -2,14 +2,17 @@ import numpy as np
 import cv2
 from scipy.spatial import KDTree
 from scipy.linalg import svd
+import datetime
 
-def extract_points_from_mask(mask, edges_only=True):
+def extract_points_from_mask(mask, show=False):
     """Extracts edge points from a binary mask."""
-    if edges_only:
-        edges = cv2.Canny(mask.astype(np.uint8) * 255, 100, 200)
-        points = np.column_stack(np.where(edges > 0))
-    else:
-        points = np.column_stack(np.where(mask > 0))
+    
+    mask = cv2.medianBlur(mask, 7)
+    edges = cv2.Canny(mask.astype(np.uint8) * 255, 50, 100, L2gradient = True)
+    if show:
+        cv2.imshow(f"{datetime.datetime.now()}", edges)
+    points = np.column_stack(np.where(edges > 0))
+
     # print(len(points))
     return points
 
@@ -31,21 +34,21 @@ def best_fit_transform(A, B):
     
     t = centroid_B - R @ centroid_A
     
-    T = np.eye(4)
+    T = np.eye(3)
     T[:2, :2] = R
-    T[:2, 3] = t
+    T[:2, 2] = t
     return T
 
-def icp(source_mask, target_mask, max_iterations=50, tolerance=1e-5, edges_only=True):
-    """Performs ICP to align source_mask to target_mask and returns a 4x4 transformation matrix."""
-    source_points = extract_points_from_mask(source_mask, edges_only)
-    target_points = extract_points_from_mask(target_mask, edges_only)
+def icp(source_mask, target_mask, max_iterations=50, tolerance=1e-5, show_mask=False):
+    """Performs ICP to align source_mask to target_mask and returns a 3x3 transformation matrix."""
+    source_points = extract_points_from_mask(source_mask, show=show_mask)
+    target_points = extract_points_from_mask(target_mask, show=show_mask)
     
     prev_error = float('inf')
-    T = np.eye(4)
+    T = np.eye(3)
 
     if len(target_points) == 0:
-        return np.zeros((4,4))
+        return np.zeros((3,3))
     
     for i in range(max_iterations):
         tree = KDTree(target_points)
@@ -54,7 +57,7 @@ def icp(source_mask, target_mask, max_iterations=50, tolerance=1e-5, edges_only=
         
         T_iter = best_fit_transform(source_points, matched_target_points)
         
-        source_points = (T_iter[:2, :2] @ source_points.T).T + T_iter[:2, 3]
+        source_points = (T_iter[:2, :2] @ source_points.T).T + T_iter[:2, 2]
         T = T_iter @ T
         
         mean_error = np.mean(distances)

@@ -191,14 +191,8 @@ while True:
             out_mask[:, :, i] = np.clip(out_mask[:, :, i] * 255, 0, 255).astype(np.uint8)
             frame = cv2.addWeighted(frame, 1, out_mask, 0.5, 0)
 
-            # all_mask = cv2.bitwise_or(all_mask, out_mask)
+            # cv2.imwrite(f"../../videos/frames/{out_obj_ids[i]}_{str(fcount).zfill(5)}.jpg", out_mask)
 
-
-
-        # all_mask = cv2.cvtColor(all_mask, cv2.COLOR_GRAY2RGB)
-        # all_mask[:, :, 2] = np.clip(all_mask[:, :, 2] * 255, 0, 255).astype(np.uint8)
-
-        # frame = cv2.addWeighted(frame, 1, all_mask, 0.5, 0)
     # print("Frame: ", fcount, end='\r')
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     cv2.imshow("frame", frame)
@@ -209,7 +203,6 @@ while True:
 
 with open(f"{args.out_dir}/{Path(args.video_path).stem}.pkl", "wb") as f:
     pickle.dump(T_matrices, f)
-print(T_matrices)
 print(f"Video saved at {output_path}")
 cap.release()
 out.release()
