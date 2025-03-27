@@ -189,9 +189,10 @@ pbar = tqdm.tqdm(total=int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
 while True:
     ret, frame = cap.read()
     # d_ret, depth_frame = depth_cap.read()
-    depth_frame = depth_maps[fcount]
     if not ret:
         break
+
+    depth_frame = depth_maps[fcount]
     
     fcount += 1
     pbar.update(1)
@@ -297,10 +298,11 @@ while True:
             
             prev_frame_mask[i] = mask_3d
 
-            out_mask = cv2.cvtColor(out_mask, cv2.COLOR_GRAY2RGB)
-            out_mask[:, :, i] = np.clip(out_mask[:, :, i] * 255, 0, 255).astype(np.uint8)
-            frame = cv2.addWeighted(frame, 1, out_mask, 0.5, 0)
+            # out_mask = cv2.cvtColor(out_mask, cv2.COLOR_GRAY2RGB)
+            # out_mask[:, :, i] = np.clip(out_mask[:, :, i] * 255, 0, 255).astype(np.uint8)
+            # frame = cv2.addWeighted(frame, 1, out_mask, 0.5, 0)
 
+            out_mask = np.clip(out_mask*255, 0, 255)
             cv2.imwrite(f"../../videos/frames/{out_obj_ids[i]}_{str(fcount).zfill(5)}.jpg", out_mask)
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
