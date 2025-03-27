@@ -297,15 +297,14 @@ while True:
             
             prev_frame_mask[i] = mask_3d
 
-            # out_mask = cv2.cvtColor(out_mask, cv2.COLOR_GRAY2RGB)
-            # out_mask[:, :, i] = np.clip(out_mask[:, :, i] * 255, 0, 255).astype(np.uint8)
-            # frame = cv2.addWeighted(frame, 1, out_mask, 0.5, 0)
+            out_mask = cv2.cvtColor(out_mask, cv2.COLOR_GRAY2RGB)
+            out_mask[:, :, i] = np.clip(out_mask[:, :, i] * 255, 0, 255).astype(np.uint8)
+            frame = cv2.addWeighted(frame, 1, out_mask, 0.5, 0)
 
-            # cv2.imwrite(f"../../videos/frames/{out_obj_ids[i]}_{str(fcount).zfill(5)}.jpg", out_mask)
+            cv2.imwrite(f"../../videos/frames/{out_obj_ids[i]}_{str(fcount).zfill(5)}.jpg", out_mask)
 
-    ## print("Frame: ", fcount, end='\r')
-    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # cv2.imshow("frame", frame)
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    cv2.imshow("frame", frame)
     # out.write(frame)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
